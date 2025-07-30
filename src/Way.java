@@ -2,14 +2,13 @@ import java.util.concurrent.Semaphore;
 
 public class Way {
     private final Semaphore permit = new Semaphore(1);
-    private int id, occupantId;
-
+    private final int id;
+    private int occupantId;
+    public Way(int id){
+        this.id = id;
+    }
     public int getId() {
         return this.id;
-    }
-
-    public void setId(int id) {
-        this.id = id;
     }
 
     public int getOccupantId() {

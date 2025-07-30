@@ -1,4 +1,5 @@
 import java.util.List;
+import java.util.Objects;
 
 public class Plane implements Runnable{
     private enum State{
@@ -9,7 +10,9 @@ public class Plane implements Runnable{
     private boolean emergency;
     private final double weight, consumptionRate;
     private double extraWeight;
-    private int nrOfPassengers, id;
+    private int nrOfPassengers;
+    private final int id;
+    private static int index= 1;
     private double fuel;
     public boolean isEmergency() {
         return this.emergency;
@@ -19,6 +22,7 @@ public class Plane implements Runnable{
         this.weight = weight;
         this.consumptionRate = consumptionRate;
         this.state = State.GATE;
+        this.id= index++;
     }
     private double consumptionPerTimeUnit(){
         double totalWeight= this.weight+ this.extraWeight+ 80* this.nrOfPassengers;
@@ -33,6 +37,12 @@ public class Plane implements Runnable{
         double baseFuel= duration* consumptionPerTimeUnit();
         this.fuel= baseFuel* (1+ Math.random());
         return .02* baseFuel;
+    }
+    public int getId(){
+        return this.id;
+    }
+    public double getFuel(){
+        return this.fuel;
     }
     @Override
     public void run() {
@@ -71,17 +81,24 @@ public class Plane implements Runnable{
                     case ARRIVING -> {
                         int gateId = -1, runwayId = -1, taxiwayId = -1;
                         while (gateId == -1 || runwayId == -1 || taxiwayId == -1) {
-                            if(fuel< safeLevelFuel)
+                            if (fuel < safeLevelFuel)
                                 this.emergency = true;
-                            gateId = gateManager.acquire(this.id);
-                            runwayId = tower.acquire(0, this.id);
-                            taxiwayId = tower.acquire(1, this.id);
-                            Thread.sleep((int) (updateInterval* Clock.getScale()* 1000));
-                            updateFuel(updateInterval);
+                            LandingClearance clearance = tower.landingRequest(this);
+                            if (clearance != null) {
+                                gateId= clearance.gateId();
+                                runwayId= clearance.runwayId();
+                                taxiwayId= clearance.taxiwayId();
+                            }
+                            else {
+                                Thread.sleep((int) (updateInterval * Clock.getScale() * 1000));
+                                updateFuel(updateInterval);
+                            }
                         }
                         System.out.println("Gate " + gateId + ", Runway " + runwayId + ", Taxiway" + taxiwayId);
                         Thread.sleep(1000);
                         this.schedule.removeFirst();
+                        tower.release(0, runwayId);
+                        tower.release(1, taxiwayId);
                         this.state = State.GATE;
                     }
                     case FLYING -> {
@@ -107,5 +124,17 @@ public class Plane implements Runnable{
         catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass()) return false;
+        Plane plane = (Plane) o;
+        return Double.compare(weight, plane.weight) == 0 && Double.compare(consumptionRate, plane.consumptionRate) == 0 && id == plane.id;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(weight, consumptionRate, id);
     }
 }
