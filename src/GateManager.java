@@ -1,4 +1,3 @@
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -18,6 +17,14 @@ public class GateManager {
     }
     public static GateManager getInstance(){
         return instance;
+    }
+
+    public int getGateId(int planeId){
+        for(Way gateway: gateways){
+            if(gateway.getId() == planeId)
+                return gateway.getId();
+        }
+        return -1;
     }
 
     public int acquire( int id) {

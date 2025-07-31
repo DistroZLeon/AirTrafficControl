@@ -6,7 +6,7 @@ public class Plane implements Runnable{
         GATE(), FLYING(), LEAVING(), ARRIVING()
     }
     private State state;
-    private List<FlySchedule> schedule;
+    private final List<FlySchedule> schedule;
     private boolean emergency;
     private final double weight, consumptionRate;
     private double extraWeight;
@@ -38,12 +38,19 @@ public class Plane implements Runnable{
         this.fuel= baseFuel* (1+ Math.random());
         return .02* baseFuel;
     }
+
     public int getId(){
         return this.id;
     }
+
     public double getFuel(){
         return this.fuel;
     }
+
+    public FlySchedule getFlyingPlan(){
+        return this.schedule.getFirst();
+    }
+
     @Override
     public void run() {
         try {
@@ -69,20 +76,24 @@ public class Plane implements Runnable{
                         }
                     }
                     case LEAVING -> {
-                        int runwayId = -1, taxiwayId = -1;
+                        int runwayId = -1, taxiwayId = -1, gateId= gateManager.getGateId(this.id);
                         while (runwayId == -1 || taxiwayId == -1) {
-                            runwayId = tower.acquire(0, this.id);
-                            taxiwayId = tower.acquire(2, this.id);
+                            tower.updateTakeoffQueue(this);
+                            LandingClearance clearance= tower.takeoffClearance(this);
+                            if(clearance!= null) {
+                                runwayId = clearance.runwayId();
+                                taxiwayId = clearance.taxiwayId();
+                            }
                         }
                         System.out.println("Runway " + runwayId + ", Taxiway" + taxiwayId);
                         Thread.sleep(1000);
+                        tower.finishedTakeoff(runwayId, taxiwayId, gateId);
                         this.state = State.FLYING;
                     }
                     case ARRIVING -> {
                         int gateId = -1, runwayId = -1, taxiwayId = -1;
                         while (gateId == -1 || runwayId == -1 || taxiwayId == -1) {
-                            if (fuel < safeLevelFuel)
-                                this.emergency = true;
+                            tower.updateLandingQueue(this);
                             LandingClearance clearance = tower.landingRequest(this);
                             if (clearance != null) {
                                 gateId= clearance.gateId();
@@ -92,13 +103,14 @@ public class Plane implements Runnable{
                             else {
                                 Thread.sleep((int) (updateInterval * Clock.getScale() * 1000));
                                 updateFuel(updateInterval);
+                                if (fuel < safeLevelFuel)
+                                    this.emergency = true;
                             }
                         }
                         System.out.println("Gate " + gateId + ", Runway " + runwayId + ", Taxiway" + taxiwayId);
                         Thread.sleep(1000);
                         this.schedule.removeFirst();
-                        tower.release(0, runwayId);
-                        tower.release(1, taxiwayId);
+                        tower.finishedLanding(runwayId, taxiwayId);
                         this.state = State.GATE;
                     }
                     case FLYING -> {

@@ -1,17 +1,17 @@
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.PriorityQueue;
+import java.util.concurrent.PriorityBlockingQueue;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class ControlTower {
     private static ControlTower instance;
-    private final List<Way> runaways, taxiwaysTakeoff, taxiwaysLanding;
+    private final List<Way> runways, taxiwaysTakeoff, taxiwaysLanding;
     private final String airportName;
-    private PriorityQueue<Plane> landingQueue=  new PriorityQueue<>(Comparator.comparing(Plane::isEmergency).reversed().thenComparingDouble(Plane::getFuel));
+    private final PriorityBlockingQueue<Plane> takeoffQueue= new PriorityBlockingQueue<>(5, Comparator.comparingDouble((Plane p)-> p.getFlyingPlan().getTimeOfDeparture()).thenComparing(Comparator.comparingDouble((Plane p)->p.getFlyingPlan().getTimeOfArrival()).reversed()));
+    private final PriorityBlockingQueue<PlaneState> landingQueue=  new PriorityBlockingQueue<>(11,Comparator.comparing(PlaneState::emergency).reversed().thenComparingDouble(PlaneState::fuel));
     private ControlTower(String airportName, int nrRunaways, int nrTaxiways){
-        this.runaways= IntStream.range(1, nrRunaways).mapToObj(Way::new).collect(Collectors.toList());
+        this.runways= IntStream.range(1, nrRunaways).mapToObj(Way::new).collect(Collectors.toList());
         this.taxiwaysTakeoff= IntStream.range(1, nrTaxiways).mapToObj(Way::new).collect(Collectors.toList());
         this.taxiwaysLanding= IntStream.range(1, nrTaxiways).mapToObj(Way::new).collect(Collectors.toList());
         this.airportName= airportName;
@@ -26,10 +26,10 @@ public class ControlTower {
         return instance;
     }
 
-    public synchronized int acquire(int type, int id){
+    private synchronized int acquire(int type, int id){
         int idWay= -1;
         List<Way> ways= switch (type){
-            case 0-> this.runaways;
+            case 0-> this.runways;
             case 1-> this.taxiwaysTakeoff;
             case 2-> this.taxiwaysLanding;
             default-> null;
@@ -44,9 +44,9 @@ public class ControlTower {
         return idWay;
     }
 
-    public synchronized void release(int type, int id){
+    private synchronized void release(int type, int id){
         List<Way> ways= switch (type){
-            case 0-> this.runaways;
+            case 0-> this.runways;
             case 1-> this.taxiwaysTakeoff;
             case 2-> this.taxiwaysLanding;
             default-> null;
@@ -57,23 +57,67 @@ public class ControlTower {
         way.release();
     }
 
+    public synchronized void updateLandingQueue(Plane plane){
+        PlaneState state= new PlaneState(plane.getId(), plane.getFuel(), plane.isEmergency());
+        this.landingQueue.remove(state);
+        this.landingQueue.add(state);
+    }
+
+    public synchronized void updateTakeoffQueue(Plane plane){
+        this.takeoffQueue.remove(plane);
+        this.takeoffQueue.add(plane);
+    }
+
     public synchronized LandingClearance landingRequest(Plane plane) throws InterruptedException {
         int gateId, runwayId, taxiwayId;
         GateManager gateManager= GateManager.getInstance();
-        this.landingQueue.remove(plane);
-        this.landingQueue.add(plane);
-        if(!landingQueue.isEmpty()&& landingQueue.peek()!=plane)
+        PlaneState state= new PlaneState(plane.getId(), plane.getFuel(), plane.isEmergency());
+        PlaneState currentState= this.landingQueue.peek();
+        if(currentState== null|| !currentState.equals(state))
             return null;
         gateId = gateManager.acquire(plane.getId());
         runwayId = acquire(0, plane.getId());
         taxiwayId = acquire(1, plane.getId());
-        if(gateId == -1 || runwayId == -1 || taxiwayId == -1)
+        if(gateId == -1 || runwayId == -1 || taxiwayId == -1) {
+            if(runwayId == -1) release(0, runwayId);
+            if(taxiwayId == -1) release(1, taxiwayId);
+            if(gateId == -1) gateManager.release(gateId);
             return null;
+        }
+        landingQueue.poll();
         return new LandingClearance(runwayId, taxiwayId, gateId);
     }
 
     public synchronized LandingClearance takeoffClearance(Plane plane) throws InterruptedException {
-        return null;
+        int gateId, runwayId, taxiwayId;
+        GateManager gateManager= GateManager.getInstance();
+        gateId= gateManager.getGateId(plane.getId());
+        if(gateId == -1)
+            return null;
+        Plane currentTop= takeoffQueue.peek();
+        if(currentTop == null|| !currentTop.equals(plane))
+            return null;
+        runwayId = acquire(0, plane.getId());
+        taxiwayId = acquire(2, plane.getId());
+        if(runwayId == -1 || taxiwayId == -1) {
+            if(runwayId == -1) release(0, runwayId);
+            if(taxiwayId == -1) release(2, taxiwayId);
+            return null;
+        }
+        takeoffQueue.poll();
+        return new LandingClearance(runwayId, taxiwayId, gateId);
+    }
+
+    public synchronized void finishedLanding(int runwayId, int taxiwayId){
+        release(0, runwayId);
+        release(1, taxiwayId);
+    }
+
+    public synchronized void finishedTakeoff(int runwayId, int taxiwayId, int gateId){
+        GateManager gateManager= GateManager.getInstance();
+        release(0, runwayId);
+        release(2, taxiwayId);
+        gateManager.release(gateId);
     }
 
     public String getAirportName(){

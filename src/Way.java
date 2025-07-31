@@ -15,9 +15,6 @@ public class Way {
         return this.occupantId;
     }
 
-    public void setOccupantId(int occupantId) {
-        this.occupantId = occupantId;
-    }
     public int acquire(int id) {
         if(this.permit.tryAcquire()) {
             this.occupantId = id;
