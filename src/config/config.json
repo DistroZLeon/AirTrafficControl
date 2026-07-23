@@ -1,0 +1,29 @@
+{
+  "airportConfiguration": {
+    "airportName": "",
+    "numberOfGates": 0,
+    "numberOfRunways": 0,
+    "numberOfTakeOffTaxiways": 0,
+    "numberOfLandingTaxiways": 0
+  },
+  "generatorsSettings": {
+    "WeatherUpdateIntervalsSeconds": 0,
+    "EmergencyGenerationIntervalsSeconds": 0
+  },
+  "planes": [
+    {
+      "schedules": [
+        {
+          "destination": "",
+          "startingPoint": "",
+          "timeOfArrival": "",
+          "timeOfDeparture": "",
+          "nrOfPassengers": 0,
+          "cargoWeight": 0.0
+        }
+      ],
+      "weight": 0.0,
+      "consumptionRate": 0.0
+    }
+  ]
+}
