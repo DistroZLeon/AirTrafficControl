@@ -2,26 +2,27 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-public class GateManager {
-    private static GateManager instance= null;
+public class GateManager{
     private final List<Way> gateways;
     private final String airportName;
-    private GateManager(String airportName, int number){
-        this.gateways = IntStream.range(1, number).mapToObj(Way::new).collect(Collectors.toList());
-        this.airportName= airportName;
+
+    private GateManager(){
+        int number= 8;
+        this.gateways = IntStream.range(0, number).mapToObj(Way::new).collect(Collectors.toList());
+        this.airportName= "Otopeni";
     }
-    public static GateManager getInstance(String airportName, int number){
-        if  (instance == null)
-            instance = new GateManager(airportName, number);
-        return instance;
+
+    private static class Holder{
+        private static final GateManager INSTANCE = new GateManager();
     }
+
     public static GateManager getInstance(){
-        return instance;
+        return Holder.INSTANCE;
     }
 
     public int getGateId(int planeId){
         for(Way gateway: gateways){
-            if(gateway.getId() == planeId)
+            if(gateway.getOccupantId() == planeId)
                 return gateway.getId();
         }
         return -1;

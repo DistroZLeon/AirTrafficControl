@@ -5,7 +5,7 @@ public class Main {
         System.out.println(Clock.getStartTime());
         Thread.sleep(3000);
         System.out.println(Clock.getCurrentTime());
-        ControlTower tower= ControlTower.getInstance("Otopeni",4, 2);
-        GateManager gateManager= GateManager.getInstance("Otopeni", 8);
+        ControlTower tower= ControlTower.getInstance();
+        GateManager gateManager= GateManager.getInstance();
     }
 }

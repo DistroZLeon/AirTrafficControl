@@ -1,33 +1,68 @@
+import observers.Observer;
+import states.event.EventState;
+import states.plane.AircraftInterface;
+import states.plane.FlySchedule;
+import states.plane.LandingClearance;
+import states.weather.WeatherState;
+import subjects.EventGenerator;
+import subjects.Subject;
+import subjects.WeatherEngine;
+
 import java.util.List;
 import java.util.Objects;
 
-public class Plane implements Runnable{
+public class Plane implements Runnable, Observer, AircraftInterface {
     private enum State{
         GATE(), FLYING(), LEAVING(), ARRIVING()
     }
     private State state;
     private final List<FlySchedule> schedule;
-    private boolean emergency;
-    private final double weight, consumptionRate;
-    private double extraWeight;
+
+    private volatile EventState emergency= null;
+    private volatile double weatherDrag;
+    private volatile LandingClearance clearance= null;
+
+    private final double weight;
+    private double extraWeight, consumptionRate;
     private int nrOfPassengers;
     private final int id;
     private static int index= 1;
     private double fuel;
-    public boolean isEmergency() {
-        return this.emergency;
-    }
+
     Plane(List<FlySchedule> schedule, double weight, double consumptionRate) {
         this.schedule = schedule;
+        this.weatherDrag = 1.0;
         this.weight = weight;
         this.consumptionRate = consumptionRate;
         this.state = State.GATE;
         this.id= index++;
     }
+
+    public EventState getEmergency() {
+        return this.emergency;
+    }
+    public int getId(){
+        return this.id;
+    }
+    public double getFuel(){
+        return this.fuel;
+    }
+    public FlySchedule getFlyingPlan(){
+        return this.schedule.getFirst();
+    }
+
     private double consumptionPerTimeUnit(){
         double totalWeight= this.weight+ this.extraWeight+ 80* this.nrOfPassengers;
-        return this.consumptionRate* totalWeight;
+        return (this.consumptionRate* totalWeight)*this.weatherDrag;
     }
+
+    public double getRemainingTimeFlight(){
+        double currentRate= this.consumptionPerTimeUnit();
+        if(currentRate<= 0) return Double.MAX_VALUE;
+
+        return fuel/ currentRate;
+    }
+
     private void updateFuel(double timePassed){
         this.fuel-= consumptionPerTimeUnit()* timePassed;
     }
@@ -39,16 +74,34 @@ public class Plane implements Runnable{
         return .02* baseFuel;
     }
 
-    public int getId(){
-        return this.id;
+    @Override
+    public void update(Subject source, Object arg) {
+        if(source instanceof WeatherEngine){
+            this.handleWeatherChange(arg);
+        } else if (source instanceof EventGenerator) {
+            this.handleEvent(arg);
+        }
     }
 
-    public double getFuel(){
-        return this.fuel;
+    private void handleWeatherChange(Object arg){
+        if(arg instanceof WeatherState weather){
+            this.weatherDrag= weather.windStrength();
+            this.consumptionRate= weather.consumptionRate();
+        }
     }
 
-    public FlySchedule getFlyingPlan(){
-        return this.schedule.getFirst();
+    private void handleEvent(Object arg){
+        if(arg instanceof EventState event){
+            if(event.targetId()!= this.id) return;
+            this.emergency= event;
+            if(event.fuelDrainRate()!= 0) this.consumptionRate+= event.fuelDrainRate();
+            ControlTower.getInstance().changePriority(this);
+        }
+    }
+
+    public synchronized void grantClearance(LandingClearance clearance){
+        this.clearance= clearance;
+        this.notify();
     }
 
     @Override
@@ -57,61 +110,73 @@ public class Plane implements Runnable{
             ControlTower tower = ControlTower.getInstance();
             GateManager gateManager = GateManager.getInstance();
             final double updateInterval= .1;
-            double safeLevelFuel= 0;
+
             while (!schedule.isEmpty()) {
                 FlySchedule nextFlight = this.schedule.getFirst();
+
                 switch (this.state) {
                     case GATE -> {
                         this.extraWeight = nextFlight.getCargoWeight();
                         this.nrOfPassengers = nextFlight.getNrOfPassengers();
-                        safeLevelFuel= calculateFuel(nextFlight);
                         int timeToTakeoff = (int) (nextFlight.getTimeOfDeparture() - Clock.getCurrentTime() * (Clock.getScale() * 1e9));
-                        Thread.sleep(timeToTakeoff);
+                        if(timeToTakeoff> 0) Thread.sleep(timeToTakeoff);
 
-                        if(nextFlight.getStartingPoint().equalsIgnoreCase(gateManager.getAirportName()))
+                        if(nextFlight.getStartingPoint().equalsIgnoreCase(gateManager.getAirportName())) {
+                            if (gateManager.getGateId(this.id)== -1) {
+                                System.out.println("Error: Plane " + id + " has no physical gate! Despawning.");
+                                this.schedule.clear();
+                                return;
+                            }
+
                             this.state = State.LEAVING;
+                        }
                         else{
                             Thread.sleep(1000);
                             this.state= State.FLYING;
                         }
                     }
                     case LEAVING -> {
-                        int runwayId = -1, taxiwayId = -1, gateId= gateManager.getGateId(this.id);
-                        while (runwayId == -1 || taxiwayId == -1) {
-                            tower.updateTakeoffQueue(this);
-                            LandingClearance clearance= tower.takeoffClearance(this);
-                            if(clearance!= null) {
-                                runwayId = clearance.runwayId();
-                                taxiwayId = clearance.taxiwayId();
+                        this.clearance= null;
+                        tower.updateTakeoffQueue(this);
+                        synchronized (this) {
+                            while (clearance == null) {
+                                this.wait(1000);
                             }
                         }
-                        System.out.println("Runway " + runwayId + ", Taxiway" + taxiwayId);
+                        System.out.println("Plane " + id + " Takeoff: Runway " + clearance.runwayId() + ", Taxiway " + clearance.taxiwayId());
                         Thread.sleep(1000);
-                        tower.finishedTakeoff(runwayId, taxiwayId, gateId);
-                        this.state = State.FLYING;
+                        tower.finishedTakeoff(clearance.runwayId(), clearance.taxiwayId(), clearance.gateId());
+                        this.state= State.FLYING;
                     }
                     case ARRIVING -> {
-                        int gateId = -1, runwayId = -1, taxiwayId = -1;
-                        while (gateId == -1 || runwayId == -1 || taxiwayId == -1) {
-                            tower.updateLandingQueue(this);
-                            LandingClearance clearance = tower.landingRequest(this);
-                            if (clearance != null) {
-                                gateId= clearance.gateId();
-                                runwayId= clearance.runwayId();
-                                taxiwayId= clearance.taxiwayId();
-                            }
-                            else {
-                                Thread.sleep((int) (updateInterval * Clock.getScale() * 1000));
-                                updateFuel(updateInterval);
-                                if (fuel < safeLevelFuel)
-                                    this.emergency = true;
+                        this.clearance= null;
+                        tower.updateLandingQueue(this);
+
+                        synchronized (this) {
+                            while (clearance == null) {
+                                this.wait((long) (updateInterval * Clock.getScale() * 1000));
+
+
+                                if (clearance == null) {
+                                    updateFuel(updateInterval);
+
+                                    if (this.fuel <= 0) {
+                                        System.out.println("Plane " + id + " ran out of fuel");
+                                        tower.removeFromLandingQueue(this);
+                                        this.schedule.clear();
+                                        return;
+                                    }
+                                }
                             }
                         }
-                        System.out.println("Gate " + gateId + ", Runway " + runwayId + ", Taxiway" + taxiwayId);
-                        Thread.sleep(1000);
-                        this.schedule.removeFirst();
-                        tower.finishedLanding(runwayId, taxiwayId);
-                        this.state = State.GATE;
+
+                        if(clearance!= null){
+                            System.out.println("Plane " + id + " Landed: Gate " + clearance.gateId() + ", Runway " + clearance.runwayId() + ", Taxiway " + clearance.taxiwayId());
+                            Thread.sleep(1000);
+                            this.schedule.removeFirst();
+                            tower.finishedLanding(clearance.runwayId(),  clearance.taxiwayId());
+                            this.state= State.GATE;
+                        }
                     }
                     case FLYING -> {
                         double timePassed= 0, flightDuration= nextFlight.getTimeOfArrival() - nextFlight.getTimeOfDeparture();
@@ -134,7 +199,8 @@ public class Plane implements Runnable{
             }
         }
         catch (InterruptedException e) {
-            throw new RuntimeException(e);
+            System.out.println("Plane " + id + " comms interrupted");
+            Thread.currentThread().interrupt();
         }
     }
 
