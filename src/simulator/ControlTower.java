@@ -1,5 +1,7 @@
 package simulator;
 
+import config.AirportConfig;
+import config.Registry;
 import observers.Observer;
 import states.plane.AircraftInterface;
 import states.plane.LandingClearance;
@@ -30,13 +32,15 @@ public class ControlTower implements Observer {
     private final PriorityBlockingQueue<AircraftInterface> landingQueue=  new PriorityBlockingQueue<>(11,Comparator.comparingInt(ControlTower::extractGravity).reversed().thenComparing(AircraftInterface::getRemainingTimeFlight));
 
     private ControlTower(){
-        this.airportName = "Otopeni";
-        int nrRunaways = 4;
-        int nrTaxiways = 2;
+        AirportConfig airportConfig= Registry.activeConfiguration.airportConfig();
+        this.airportName = airportConfig.airportName();
+        int nrRunaways = airportConfig.numberOfRunways();
+        int nrTakeOffTaxiways = airportConfig.numberOfTakeOffTaxiways();
+        int nrLandingTaxiways = airportConfig.numberOfLandingTaxiways();
 
         this.runways= IntStream.range(0, nrRunaways).mapToObj(Way::new).collect(Collectors.toList());
-        this.taxiwaysTakeoff= IntStream.range(0, nrTaxiways).mapToObj(Way::new).collect(Collectors.toList());
-        this.taxiwaysLanding= IntStream.range(0, nrTaxiways).mapToObj(Way::new).collect(Collectors.toList());
+        this.taxiwaysTakeoff= IntStream.range(0, nrTakeOffTaxiways).mapToObj(Way::new).collect(Collectors.toList());
+        this.taxiwaysLanding= IntStream.range(0, nrLandingTaxiways).mapToObj(Way::new).collect(Collectors.toList());
     }
 
     private static class Holder{
@@ -226,5 +230,9 @@ public class ControlTower implements Observer {
                 dispatch();
             }
         }
+    }
+
+    public void init(AirportConfig airportConfig){
+
     }
 }

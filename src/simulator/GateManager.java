@@ -1,5 +1,8 @@
 package simulator;
 
+import config.AirportConfig;
+import config.Registry;
+
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -9,9 +12,10 @@ public class GateManager{
     private final String airportName;
 
     private GateManager(){
-        int number= 8;
+        AirportConfig airportConfig= Registry.activeConfiguration.airportConfig();
+        this.airportName = airportConfig.airportName();
+        int number= airportConfig.numberOfRunways();
         this.gateways = IntStream.range(0, number).mapToObj(Way::new).collect(Collectors.toList());
-        this.airportName= "Otopeni";
     }
 
     private static class Holder{

@@ -124,7 +124,7 @@ public class Plane implements Runnable, Observer, AircraftInterface {
 
                         if(nextFlight.getStartingPoint().equalsIgnoreCase(gateManager.getAirportName())) {
                             if (gateManager.getGateId(this.id)== -1) {
-                                System.out.println("Error: simulator.Plane "+ id+ " has no physical gate!");
+                                System.out.println("Error: Plane "+ id+ " has no physical gate!");
                                 this.schedule.clear();
                                 return;
                             }
@@ -144,7 +144,7 @@ public class Plane implements Runnable, Observer, AircraftInterface {
                                 this.wait(1000);
                             }
                         }
-                        System.out.println("simulator.Plane " + id + " Takeoff: Runway " + clearance.runwayId() + ", Taxiway " + clearance.taxiwayId());
+                        System.out.println("Plane " + id + " Takeoff: Runway " + clearance.runwayId() + ", Taxiway " + clearance.taxiwayId());
                         Thread.sleep(1000);
                         tower.finishedTakeoff(clearance.runwayId(), clearance.taxiwayId(), clearance.gateId());
                         this.state= State.FLYING;
@@ -162,7 +162,7 @@ public class Plane implements Runnable, Observer, AircraftInterface {
                                     updateFuel(updateInterval);
 
                                     if (this.fuel <= 0) {
-                                        System.out.println("simulator.Plane " + id + " ran out of fuel");
+                                        System.out.println("Plane " + id + " ran out of fuel");
                                         tower.removeFromLandingQueue(this);
                                         this.schedule.clear();
                                         return;
@@ -172,7 +172,7 @@ public class Plane implements Runnable, Observer, AircraftInterface {
                         }
 
                         if(clearance!= null){
-                            System.out.println("simulator.Plane " + id + " Landed: Gate " + clearance.gateId() + ", Runway " + clearance.runwayId() + ", Taxiway " + clearance.taxiwayId());
+                            System.out.println("Plane " + id + " Landed: Gate " + clearance.gateId() + ", Runway " + clearance.runwayId() + ", Taxiway " + clearance.taxiwayId());
                             Thread.sleep(1000);
                             this.schedule.removeFirst();
                             tower.finishedLanding(clearance.runwayId(),  clearance.taxiwayId());
@@ -200,7 +200,7 @@ public class Plane implements Runnable, Observer, AircraftInterface {
             }
         }
         catch (InterruptedException e) {
-            System.out.println("simulator.Plane " + id + " comms interrupted");
+            System.out.println("Plane " + id + " comms interrupted");
             Thread.currentThread().interrupt();
         }
         finally{
@@ -213,7 +213,7 @@ public class Plane implements Runnable, Observer, AircraftInterface {
                 gateManager.release(currentGateId);
             }
 
-            System.out.println("simulator.Plane " + id + " ended its schedule for today!");
+            System.out.println("Plane " + id + " ended its schedule for today!");
         }
     }
 

@@ -1,10 +1,16 @@
+import config.Config;
+import config.Registry;
+import config.parser.DeserializerV1;
+import config.parser.JsonTokenizer;
 import simulator.ControlTower;
 import simulator.GateManager;
 import simulator.Plane;
 import states.plane.FlySchedule;
 import subjects.EventGenerator;
 import subjects.WeatherEngine;
-
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -13,6 +19,19 @@ import java.util.List;
 public class Main {
     public static void main(String[] args) throws InterruptedException {
         System.out.println("-- Initialization --");
+
+        Config config;
+        try (BufferedReader reader = new BufferedReader(new FileReader("./src/config/config.json"))){
+            JsonTokenizer tokenizer = new JsonTokenizer(reader);
+            DeserializerV1 deserializer = new DeserializerV1(tokenizer);
+            config= deserializer.parseConfig();
+            Registry.activeConfiguration= config;
+
+            System.out.println("Config loaded successfully! Number of planes: "+ config.planes().size());
+        }catch(IOException e){
+            System.err.println("- Failed to parse config file: " + e.getMessage());
+            return;
+        }
 
         ControlTower tower= ControlTower.getInstance();
         GateManager gateManager= GateManager.getInstance();
@@ -24,34 +43,20 @@ public class Main {
         new Thread(eventGenerator, "EventThread").start();
         new Thread(weatherEngine, "WeatherThread").start();
 
-        List<FlySchedule> schedule1= new ArrayList<>();
-        schedule1.add(new FlySchedule("Otopeni", "JFK", 20, 0, 150, 2000));
-        Plane plane1 = new Plane(schedule1, 45000.0, 12.0);
+        List<Plane> planes= Registry.activeConfiguration.planes();
 
-        List<FlySchedule> schedule2 = new ArrayList<>();
-        // Departs at time 150, arrives at time 1500
-        schedule2.add(new FlySchedule("Otopeni", "LHR", 30, 15, 200, 3000));
-        Plane plane2 = new Plane(schedule2, 50000.0, 14.0);
-
-        List<FlySchedule> schedule3 = new ArrayList<>();
-        // Departs at time 0, arrives at time 1025
-        schedule3.add(new FlySchedule("JFK", "Otopeni", 25, 10, 100, 1500));
-        Plane plane3 = new Plane(schedule3, 35000.0, 10.0);
-
-        Plane[] fleet = {plane1, plane2, plane3};
-
-        for(Plane plane: fleet) {
+        for(Plane plane: planes) {
             weatherEngine.addObserver(plane);
             eventGenerator.addObserver(plane);
 
             if(plane.getFlyingPlan().getStartingPoint().equalsIgnoreCase(tower.getAirportName())){
                 int gateId = gateManager.acquire(plane.getId());
                 if (gateId != -1) {
-                    System.out.println("simulator.Plane " + plane.getId() + " at Gate " + gateId);
+                    System.out.println("Plane " + plane.getId() + " at Gate " + gateId);
                 } else
                     System.out.println("- Airport full!");
             }
-            new Thread(plane, "simulator.Plane-" + plane.getId()).start();
+            new Thread(plane, "Plane-" + plane.getId()).start();
         }
 
         System.out.println("-- Running --");

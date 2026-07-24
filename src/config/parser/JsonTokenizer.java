@@ -1,5 +1,4 @@
 package config.parser;
-
 import java.io.IOException;
 import java.io.Reader;
 
@@ -22,7 +21,7 @@ public class JsonTokenizer {
         }
     }
 
-    private Token getNextToken() throws IOException {
+    public Token getNextToken() throws IOException {
         skipWhitespace();
         if (this.currentChar== -1) {
             return new Token(JsonToken.EOF, "");

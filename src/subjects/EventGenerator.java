@@ -1,4 +1,5 @@
 package subjects;
+import config.Registry;
 import observers.Observer;
 import states.event.EventState;
 import states.event.EventType;
@@ -11,7 +12,10 @@ import java.util.Random;
 
 public class EventGenerator extends Subject implements Runnable {
     private final Random random = new Random();
-    private EventGenerator(){}
+    private final int emergencyIntervals;
+    private EventGenerator(){
+        this.emergencyIntervals= Registry.activeConfiguration.generatorSettings().EmergencyGenerationIntervalsSeconds()*1000;
+    }
 
     private static class Holder{
         private static final EventGenerator INSTANCE = new EventGenerator();
@@ -29,7 +33,7 @@ public class EventGenerator extends Subject implements Runnable {
     public void run() {
         try {
             while (!Thread.currentThread().isInterrupted()) {
-                Thread.sleep(10000);
+                Thread.sleep(this.emergencyIntervals);
                 if(random.nextDouble()>= 0.85){
                     List<AircraftInterface> activePlanes = new ArrayList<>();
                     for(Observer o : observers){

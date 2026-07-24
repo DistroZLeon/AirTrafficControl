@@ -7,8 +7,8 @@
     "numberOfLandingTaxiways": 0
   },
   "generatorsSettings": {
-    "WeatherUpdateIntervalsSeconds": 0,
-    "EmergencyGenerationIntervalsSeconds": 0
+    "weatherUpdateIntervalsSeconds": 0,
+    "emergencyGenerationIntervalsSeconds": 0
   },
   "planes": [
     {
@@ -16,9 +16,9 @@
         {
           "destination": "",
           "startingPoint": "",
-          "timeOfArrival": "",
-          "timeOfDeparture": "",
-          "nrOfPassengers": 0,
+          "timeOfArrival": 0.0,
+          "timeOfDeparture": 0.0,
+          "numberOfPassengers": 0,
           "cargoWeight": 0.0
         }
       ],
