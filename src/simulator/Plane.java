@@ -20,21 +20,22 @@ public class Plane implements Runnable, Observer, AircraftInterface {
     private final List<FlySchedule> schedule;
 
     private volatile EventState emergency= null;
-    private volatile double weatherDrag;
+    private volatile double weatherDrag= 1.0, weatherFuelMulti= 1.0, emergencyDrain= 0.0;
     private volatile LandingClearance clearance= null;
 
     private final double weight;
-    private double extraWeight, consumptionRate;
+    private double extraWeight;
+    private final double baseConsumptionRate;
     private int nrOfPassengers;
     private final int id;
     private static int index= 1;
     private double fuel;
 
-    public Plane(List<FlySchedule> schedule, double weight, double consumptionRate) {
+    public Plane(List<FlySchedule> schedule, double weight, double baseConsumptionRate) {
         this.schedule = schedule;
         this.weatherDrag = 1.0;
         this.weight = weight;
-        this.consumptionRate = consumptionRate;
+        this.baseConsumptionRate = baseConsumptionRate;
         this.state = State.GATE;
         this.id= index++;
     }
@@ -52,9 +53,13 @@ public class Plane implements Runnable, Observer, AircraftInterface {
         return this.schedule.getFirst();
     }
 
+    private double getTotalWeight(){
+        return this.weight + this.extraWeight+ (80* this.nrOfPassengers);
+    }
+
     private double consumptionPerTimeUnit(){
-        double totalWeight= this.weight+ this.extraWeight+ 80* this.nrOfPassengers;
-        return (this.consumptionRate* totalWeight)*this.weatherDrag;
+        double activeConsumptionRate= (this.baseConsumptionRate+ this.emergencyDrain)* this.weatherFuelMulti;
+        return (activeConsumptionRate* getTotalWeight())* this.weatherDrag;
     }
 
     public double getRemainingTimeFlight(){
@@ -68,11 +73,15 @@ public class Plane implements Runnable, Observer, AircraftInterface {
         this.fuel-= consumptionPerTimeUnit()* timePassed;
     }
 
-    public double calculateFuel(FlySchedule plan){
+    public void calculateFuel(FlySchedule plan){
         double duration= plan.getTimeOfArrival()- plan.getTimeOfDeparture();
-        double baseFuel= duration* consumptionPerTimeUnit();
-        this.fuel= baseFuel* (1+ Math.random());
-        return .02* baseFuel;
+        double baseConsumption= this.baseConsumptionRate* getTotalWeight();
+        double baseFuel= duration* baseConsumption;
+
+        double weatherReserve= (Math.random()+2.5)* baseFuel;
+        double holdingReserve= (Math.random()+15.0)* baseConsumption ;
+
+        this.fuel= baseFuel+ weatherReserve + holdingReserve;
     }
 
     @Override
@@ -87,7 +96,7 @@ public class Plane implements Runnable, Observer, AircraftInterface {
     private void handleWeatherChange(Object arg){
         if(arg instanceof WeatherState weather){
             this.weatherDrag= weather.windStrength();
-            this.consumptionRate= weather.consumptionRate();
+            this.weatherFuelMulti= weather.consumptionRate();
         }
     }
 
@@ -95,7 +104,7 @@ public class Plane implements Runnable, Observer, AircraftInterface {
         if(arg instanceof EventState event){
             if(event.targetId()!= this.id) return;
             this.emergency= event;
-            if(event.fuelDrainRate()!= 0) this.consumptionRate+= event.fuelDrainRate();
+            if(event.fuelDrainRate()!= 0) this.emergencyDrain= event.fuelDrainRate();
             ControlTower.getInstance().changePriority(this);
         }
     }
@@ -119,6 +128,8 @@ public class Plane implements Runnable, Observer, AircraftInterface {
                     case GATE -> {
                         this.extraWeight = nextFlight.getCargoWeight();
                         this.nrOfPassengers = nextFlight.getNrOfPassengers();
+                        this.calculateFuel(nextFlight);
+
                         int timeToTakeoff = (int) (nextFlight.getTimeOfDeparture() - Clock.getCurrentTime() * (Clock.getScale() * 1e9));
                         if(timeToTakeoff> 0) Thread.sleep(timeToTakeoff);
 
@@ -144,7 +155,7 @@ public class Plane implements Runnable, Observer, AircraftInterface {
                                 this.wait(1000);
                             }
                         }
-                        System.out.println("Plane " + id + " Takeoff: Runway " + clearance.runwayId() + ", Taxiway " + clearance.taxiwayId());
+                        System.out.println("Plane " + id + " Takeoff with "+ String.format("%.2f", this.fuel)+ " fuel: Runway-" + clearance.runwayId() + ", Taxiway-" + clearance.taxiwayId());
                         Thread.sleep(1000);
                         tower.finishedTakeoff(clearance.runwayId(), clearance.taxiwayId(), clearance.gateId());
                         this.state= State.FLYING;
@@ -160,9 +171,9 @@ public class Plane implements Runnable, Observer, AircraftInterface {
 
                                 if (clearance == null) {
                                     updateFuel(updateInterval);
-
+                                    tower.changePriority(this);
                                     if (this.fuel <= 0) {
-                                        System.out.println("Plane " + id + " ran out of fuel");
+                                        System.out.println("Plane " + id + " ran out of fuel with a consumption of "+ String.format("%.2f", this.consumptionPerTimeUnit()));
                                         tower.removeFromLandingQueue(this);
                                         this.schedule.clear();
                                         return;
@@ -172,7 +183,7 @@ public class Plane implements Runnable, Observer, AircraftInterface {
                         }
 
                         if(clearance!= null){
-                            System.out.println("Plane " + id + " Landed: Gate " + clearance.gateId() + ", Runway " + clearance.runwayId() + ", Taxiway " + clearance.taxiwayId());
+                            System.out.println("Plane " + id + " Landed with "+ String.format("%.2f", this.fuel)+ " fuel: Gate-" + clearance.gateId() + ", Runway-" + clearance.runwayId() + ", Taxiway-" + clearance.taxiwayId());
                             Thread.sleep(1000);
                             this.schedule.removeFirst();
                             tower.finishedLanding(clearance.runwayId(),  clearance.taxiwayId());
@@ -221,11 +232,11 @@ public class Plane implements Runnable, Observer, AircraftInterface {
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) return false;
         Plane plane = (Plane) o;
-        return Double.compare(weight, plane.weight) == 0 && Double.compare(consumptionRate, plane.consumptionRate) == 0 && id == plane.id;
+        return Double.compare(weight, plane.weight) == 0 && Double.compare(baseConsumptionRate, plane.baseConsumptionRate) == 0 && id == plane.id;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(weight, consumptionRate, id);
+        return Objects.hash(weight, baseConsumptionRate, id);
     }
 }

@@ -14,7 +14,7 @@ public class GateManager{
     private GateManager(){
         AirportConfig airportConfig= Registry.activeConfiguration.airportConfig();
         this.airportName = airportConfig.airportName();
-        int number= airportConfig.numberOfRunways();
+        int number= airportConfig.numberOfGates();
         this.gateways = IntStream.range(0, number).mapToObj(Way::new).collect(Collectors.toList());
     }
 

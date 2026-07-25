@@ -40,11 +40,15 @@ public class Main {
 
         weatherEngine.addObserver(tower);
 
-        new Thread(eventGenerator, "EventThread").start();
-        new Thread(weatherEngine, "WeatherThread").start();
+        Thread eventThread= new Thread(eventGenerator, "EventThread");
+        eventThread.setDaemon(true);
+        eventThread.start();
+        Thread weatherThread= new Thread(weatherEngine, "WeatherThread");
+        weatherThread.setDaemon(true);
+        weatherThread.start();
 
         List<Plane> planes= Registry.activeConfiguration.planes();
-
+        List<Thread> activePlanes= new ArrayList<>();
         for(Plane plane: planes) {
             weatherEngine.addObserver(plane);
             eventGenerator.addObserver(plane);
@@ -53,12 +57,22 @@ public class Main {
                 int gateId = gateManager.acquire(plane.getId());
                 if (gateId != -1) {
                     System.out.println("Plane " + plane.getId() + " at Gate " + gateId);
-                } else
+                } else {
                     System.out.println("- Airport full!");
+                    continue;
+                }
             }
-            new Thread(plane, "Plane-" + plane.getId()).start();
+            Thread t= new Thread(plane, "Plane-" + plane.getId());
+            activePlanes.add(t);
+            t.start();
         }
 
         System.out.println("-- Running --");
+
+        for(Thread thread: activePlanes){
+            thread.join();
+        }
+
+        System.out.println("-- All planes have finished their schedule. Closing the Simulator --");
     }
 }

@@ -35,7 +35,7 @@ public class WeatherEngine extends Subject implements Runnable {
                     WeatherType type = types[random.nextInt(types.length)];
 
                     double windStrength = random.nextDouble() * 2.0;
-                    double consumptionRate = type.getBaseFuelConsumption() + random.nextDouble() * 1.7;
+                    double consumptionRate = type.getBaseFuelConsumption() + random.nextDouble();
                     double visibility = type.getBaseVisibility() + random.nextDouble() * .3;
                     int lanesClosed = random.nextDouble() >= .5 ? type.getBaseLanesClosed() + 1 : type.getBaseLanesClosed();
 

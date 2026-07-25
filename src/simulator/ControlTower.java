@@ -193,9 +193,9 @@ public class ControlTower implements Observer {
                     if (closedWayId != -1) {
                         closedAlready++;
                         String message = switch (choice) {
-                            case 0 -> "Runway";
-                            case 1 -> "Takeoff Taxiway";
-                            default -> "Landing Taxiway";
+                            case 0 -> "Runway-";
+                            case 1 -> "Takeoff Taxiway-";
+                            default -> "Landing Taxiway-";
                         };
                         System.out.println(message + closedWayId + " closed due to weather!");
                     }
@@ -218,8 +218,8 @@ public class ControlTower implements Observer {
 
                             String message = switch (choice) {
                                 case 0 -> "Runway";
-                                case 1 -> "Takeoff Taxiway";
-                                default -> "Landing Taxiway";
+                                case 1 -> "Takeoff Taxiway-";
+                                default -> "Landing Taxiway-";
                             };
                             System.out.println(message + way.getId() + " opened due to weather!");
                             break;
@@ -230,9 +230,5 @@ public class ControlTower implements Observer {
                 dispatch();
             }
         }
-    }
-
-    public void init(AirportConfig airportConfig){
-
     }
 }
