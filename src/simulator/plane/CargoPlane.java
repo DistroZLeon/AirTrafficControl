@@ -14,7 +14,7 @@ public class CargoPlane extends Plane{
     }
 
     @Override
-    protected void loadAircraft(FlySchedule flySchedule){
+    public void loadAircraft(FlySchedule flySchedule){
         this.cargoWeight= flySchedule.getCargoWeight();
     }
 }

@@ -15,7 +15,7 @@ public class PassengerPlane extends Plane{
     }
 
     @Override
-    protected void loadAircraft(FlySchedule flySchedule){
+    public void loadAircraft(FlySchedule flySchedule){
         this.luggageWeight= flySchedule.getCargoWeight();
         this.nrOfPassengers= flySchedule.getNrOfPassengers();
     }
