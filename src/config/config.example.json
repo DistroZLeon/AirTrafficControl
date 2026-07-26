@@ -12,6 +12,23 @@
   },
   "planes": [
     {
+      "type": "Cargo",
+      "weight": 0.0,
+      "consumptionRate": 0.0,
+      "schedules": [
+        {
+          "destination": "",
+          "startingPoint": "",
+          "timeOfArrival": 0.0,
+          "timeOfDeparture": 0.0,
+          "cargoWeight": 0.0
+        }
+      ]
+    },
+    {
+      "type": "Passenger",
+      "weight": 0.0,
+      "consumptionRate": 0.0,
       "schedules": [
         {
           "destination": "",
@@ -21,9 +38,7 @@
           "numberOfPassengers": 0,
           "cargoWeight": 0.0
         }
-      ],
-      "weight": 0.0,
-      "consumptionRate": 0.0
+      ]
     }
   ]
 }
