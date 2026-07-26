@@ -1,6 +1,9 @@
-package simulator;
+package simulator.plane;
 
 import observers.Observer;
+import simulator.Clock;
+import simulator.ControlTower;
+import simulator.GateManager;
 import states.event.EventState;
 import states.plane.AircraftInterface;
 import states.plane.FlySchedule;
@@ -12,7 +15,7 @@ import subjects.WeatherEngine;
 import java.util.List;
 import java.util.Objects;
 
-public class Plane implements Runnable, Observer, AircraftInterface {
+public abstract class Plane implements Runnable, Observer, AircraftInterface {
     private enum State{
         GATE(), FLYING(), LEAVING(), ARRIVING()
     }
@@ -23,10 +26,8 @@ public class Plane implements Runnable, Observer, AircraftInterface {
     private volatile double weatherDrag= 1.0, weatherFuelMulti= 1.0, emergencyDrain= 0.0;
     private volatile LandingClearance clearance= null;
 
-    private final double weight;
-    private double extraWeight;
+    protected final double weight;
     private final double baseConsumptionRate;
-    private int nrOfPassengers;
     private final int id;
     private static int index= 1;
     private double fuel;
@@ -53,9 +54,8 @@ public class Plane implements Runnable, Observer, AircraftInterface {
         return this.schedule.getFirst();
     }
 
-    private double getTotalWeight(){
-        return this.weight + this.extraWeight+ (80* this.nrOfPassengers);
-    }
+    protected abstract double getTotalWeight();
+    protected abstract void loadAircraft(FlySchedule schedule);
 
     private double consumptionPerTimeUnit(){
         double activeConsumptionRate= (this.baseConsumptionRate+ this.emergencyDrain)* this.weatherFuelMulti;
@@ -126,8 +126,7 @@ public class Plane implements Runnable, Observer, AircraftInterface {
 
                 switch (this.state) {
                     case GATE -> {
-                        this.extraWeight = nextFlight.getCargoWeight();
-                        this.nrOfPassengers = nextFlight.getNrOfPassengers();
+                        this.loadAircraft(nextFlight);
                         this.calculateFuel(nextFlight);
 
                         int timeToTakeoff = (int) (nextFlight.getTimeOfDeparture() - Clock.getCurrentTime() * (Clock.getScale() * 1e9));

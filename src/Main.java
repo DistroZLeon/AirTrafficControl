@@ -1,11 +1,10 @@
 import config.Config;
 import config.Registry;
-import config.parser.DeserializerV1;
+import config.parser.DeserializerV2;
 import config.parser.JsonTokenizer;
 import simulator.ControlTower;
 import simulator.GateManager;
-import simulator.Plane;
-import states.plane.FlySchedule;
+import simulator.plane.Plane;
 import subjects.EventGenerator;
 import subjects.WeatherEngine;
 import java.io.BufferedReader;
@@ -23,7 +22,7 @@ public class Main {
         Config config;
         try (BufferedReader reader = new BufferedReader(new FileReader("./src/config/config.json"))){
             JsonTokenizer tokenizer = new JsonTokenizer(reader);
-            DeserializerV1 deserializer = new DeserializerV1(tokenizer);
+            DeserializerV2 deserializer = new DeserializerV2(tokenizer);
             config= deserializer.parseConfig();
             Registry.activeConfiguration= config;
 

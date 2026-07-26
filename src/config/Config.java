@@ -1,5 +1,5 @@
 package config;
-import simulator.Plane;
+import simulator.plane.Plane;
 import java.util.List;
 
 public record Config(

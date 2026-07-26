@@ -8,6 +8,8 @@ import states.plane.LandingClearance;
 import states.weather.WeatherState;
 import subjects.Subject;
 import subjects.WeatherEngine;
+
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Random;
@@ -16,6 +18,8 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class ControlTower implements Observer {
+    private record WeatherLock(Way way, int type) {}
+    private final List<WeatherLock> weatherClosedWays;
     private final Random random = new Random();
     private final List<Way> runways, taxiwaysTakeoff, taxiwaysLanding;
     private final String airportName;
@@ -41,6 +45,7 @@ public class ControlTower implements Observer {
         this.runways= IntStream.range(0, nrRunaways).mapToObj(Way::new).collect(Collectors.toList());
         this.taxiwaysTakeoff= IntStream.range(0, nrTakeOffTaxiways).mapToObj(Way::new).collect(Collectors.toList());
         this.taxiwaysLanding= IntStream.range(0, nrLandingTaxiways).mapToObj(Way::new).collect(Collectors.toList());
+        this.weatherClosedWays= new ArrayList<>();
     }
 
     private static class Holder{
@@ -91,8 +96,16 @@ public class ControlTower implements Observer {
     }
 
     public synchronized void changePriority(AircraftInterface plane){
-        this.landingQueue.remove(plane);
-        this.landingQueue.add(plane);
+        if(this.landingQueue.contains(plane)) {
+            this.landingQueue.remove(plane);
+            this.landingQueue.add(plane);
+        }
+
+        if(this.takeoffQueue.contains(plane)) {
+            this.takeoffQueue.remove(plane);
+            this.takeoffQueue.add(plane);
+        }
+
         dispatch();
     }
 
@@ -168,67 +181,55 @@ public class ControlTower implements Observer {
     public void update(Subject source, Object arg) {
         if(source instanceof WeatherEngine){
             if(arg instanceof WeatherState state){
-                int closedAlready= 0;
                 final int weatherId= -999;
 
-                for(Way way : runways)
-                    if(way.getOccupantId()== weatherId)
-                        closedAlready++;
-
-                for(Way way : taxiwaysTakeoff)
-                    if(way.getOccupantId()== weatherId)
-                        closedAlready++;
-
-
-                for(Way way : taxiwaysLanding)
-                    if(way.getOccupantId()== weatherId)
-                        closedAlready++;
-
                 int attempts=0;
-                while(closedAlready< state.lanesClose()&& attempts<40) {
+                while(this.weatherClosedWays.size()< state.lanesClose()&& attempts<40) {
                     attempts++;
                     int choice = this.random.nextInt(3);
 
                     int closedWayId = acquire(choice, weatherId);
                     if (closedWayId != -1) {
-                        closedAlready++;
                         String message = switch (choice) {
                             case 0 -> "Runway-";
                             case 1 -> "Takeoff Taxiway-";
                             default -> "Landing Taxiway-";
                         };
+                        this.weatherClosedWays.add(new WeatherLock(getWayById(choice, closedWayId), choice));
                         System.out.println(message + closedWayId + " closed due to weather!");
                     }
                 }
 
-                attempts=0;
-                while(closedAlready> state.lanesClose()&&  attempts<40) {
-                    attempts++;
-                    int choice = this.random.nextInt(3);
-                    List<Way> ways= switch (choice){
-                        case 0-> this.runways;
-                        case 1-> this.taxiwaysTakeoff;
-                        default-> this.taxiwaysLanding;
+                while(this.weatherClosedWays.size()> state.lanesClose()) {
+                    int index = this.random.nextInt(this.weatherClosedWays.size());
+                    WeatherLock weatherLock= this.weatherClosedWays.remove(index);
+
+                    release(weatherLock.type(), weatherLock.way().getId());
+
+                    String message = switch (weatherLock.type()) {
+                        case 0 -> "Runway-";
+                        case 1 -> "Takeoff Taxiway-";
+                        default -> "Landing Taxiway-";
                     };
-
-                    for(Way way : ways){
-                        if(way.getOccupantId()== weatherId){
-                            release(choice, way.getId());
-                            closedAlready--;
-
-                            String message = switch (choice) {
-                                case 0 -> "Runway";
-                                case 1 -> "Takeoff Taxiway-";
-                                default -> "Landing Taxiway-";
-                            };
-                            System.out.println(message + way.getId() + " opened due to weather!");
-                            break;
-                        }
-                    }
+                    System.out.println(message + weatherLock.way().getId() + " opened due to weather!");
                 }
 
                 dispatch();
             }
         }
+    }
+
+    private Way getWayById(int type, int id){
+        List<Way> ways= switch (type){
+            case 0->this.runways;
+            case 1->this.taxiwaysTakeoff;
+            default->this.taxiwaysLanding;
+        };
+
+        for(Way way: ways)
+            if(way.getId() == id)
+                return way;
+
+        return null;
     }
 }
