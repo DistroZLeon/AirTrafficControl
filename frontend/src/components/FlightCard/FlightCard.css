@@ -1,0 +1,89 @@
+.flight-card {
+    background-color: var(--card-bg);
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+    transition: transform 0.2s;
+    border-left: 4px solid var(--accent-green);
+}
+
+.emergency-border {
+    border-left: 4px solid var(--accent-red);
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+    70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #334155;
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+}
+
+.card-header h2 {
+    margin: 0;
+    font-size: 1.4rem;
+}
+
+.card-header span {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    font-weight: normal;
+}
+
+.emergency-badge {
+    background: var(--accent-red);
+    color: white;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
+.card-metrics {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 25px;
+}
+
+.metric {
+    display: flex;
+    flex-direction: column;
+}
+
+.metric label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+}
+
+.metric span {
+    font-size: 1.1rem;
+    font-weight: bold;
+}
+
+.low-fuel {
+    color: var(--accent-red);
+}
+
+.timer {
+    color: var(--accent-yellow);
+    font-family: monospace;
+    font-size: 1.3rem !important;
+}
+
+.raw-status-text {
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--accent-yellow);
+    margin-top: 10px;
+    font-weight: 500;
+}

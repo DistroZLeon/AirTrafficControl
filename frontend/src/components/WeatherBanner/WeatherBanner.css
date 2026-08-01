@@ -1,0 +1,45 @@
+.weather-banner {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 10px 20px;
+    border-radius: 8px;
+    background-color: var(--card-bg);
+    border: 1px solid #334155;
+}
+
+.weather-warning {
+    background-color: rgba(239, 68, 68, 0.1);
+    border-color: var(--accent-red);
+}
+
+.weather-warning .weather-title {
+    color: var(--accent-red);
+    font-weight: bold;
+}
+
+.weather-icon {
+    font-size: 2rem;
+}
+
+.weather-details {
+    display: flex;
+    flex-direction: column;
+}
+
+.weather-title {
+    font-size: 0.9rem;
+    font-weight: bold;
+    color: var(--text-main);
+    letter-spacing: 1px;
+}
+
+.weather-stats {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
+.weather-stats strong {
+    color: var(--accent-yellow);
+}

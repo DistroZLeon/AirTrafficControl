@@ -1,0 +1,46 @@
+.travel-track-container {
+    position: relative;
+    width: 100%;
+    height: 40px;
+    margin-top: 15px;
+    margin-bottom: 5px;
+}
+
+.travel-line {
+    position: absolute;
+    top: 50%;
+    left: 5%;
+    right: 5%;
+    height: 2px;
+    background: #334155;
+    border-radius: 2px;
+}
+
+.travel-nodes {
+    position: absolute;
+    top: 50%;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    transform: translateY(-50%);
+}
+
+.node {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    font-weight: bold;
+    background: var(--card-bg);
+    padding: 0 5px;
+}
+
+.animated-plane {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 1.5rem;
+
+    transition: left 0.5s linear;
+
+    z-index: 10;
+    text-shadow: 0 0 10px var(--accent-green);
+}
