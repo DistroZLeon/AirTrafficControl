@@ -6,7 +6,6 @@ import states.weather.WeatherState;
 import subjects.Subject;
 import subjects.WeatherEngine;
 
-import java.util.HashMap;
 import java.util.Map;
 
 @Service

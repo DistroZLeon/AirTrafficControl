@@ -1,11 +1,8 @@
 package states.plane.stateMachine;
 import simulator.airport.Clock;
 import simulator.airport.ControlTower;
-import simulator.plane.CargoPlane;
-import simulator.plane.PassengerPlane;
 import simulator.plane.Plane;
 import states.plane.LandingClearance;
-import states.plane.RadarData;
 
 import java.util.Map;
 

@@ -2,7 +2,7 @@
 out/
 !**/src/main/**/out/
 !**/src/test/**/out/
-src/main/resources/config.json
+backend/src/main/resources/config.json
 production
 
 ### Eclipse ###
@@ -30,3 +30,19 @@ bin/
 
 ### Mac OS ###
 .DS_Store
+
+### IntelliJ IDEA ###
+*.iml
+*.iws
+
+### Maven / Java ###
+target/
+backend/target/
+*.jar
+*.war
+*.log
+
+### Environment ###
+.env
+.env.local
+.env.*.local
